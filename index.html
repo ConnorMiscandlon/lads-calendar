@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lads Lads Lads</title>
+<style>
+:root {
+  --bg: #0d0d14;
+  --surface: #14141e;
+  --card: #1c1c2a;
+  --card2: #22223a;
+  --border: #2a2a42;
+  --text: #e2e2f0;
+  --text2: #7a7a9a;
+  --avail: #34d399;
+  --busy: #f87171;
+  --maybe: #fbbf24;
+  --accent: #7c6aff;
+  --accent-dim: rgba(124,106,255,.14);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text)}
+a{color:var(--accent)}
+
+/* ── Setup ─────────────────────────────── */
+#setup{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:24px}
+.setup-icon{font-size:48px;margin-bottom:16px}
+.setup-title{font-size:26px;font-weight:800;margin-bottom:8px;text-align:center}
+.setup-sub{color:var(--text2);font-size:15px;line-height:1.6;text-align:center;max-width:440px;margin-bottom:32px}
+.setup-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:28px;width:100%;max-width:480px}
+.setup-card h2{font-size:15px;font-weight:700;margin-bottom:18px;letter-spacing:.02em;text-transform:uppercase;color:var(--text2)}
+.steps{list-style:none;counter-reset:steps}
+.steps li{counter-increment:steps;display:flex;gap:12px;margin-bottom:14px;font-size:14px;color:var(--text2);line-height:1.55;align-items:flex-start}
+.steps li::before{content:counter(steps);flex-shrink:0;width:22px;height:22px;background:var(--accent);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;margin-top:1px}
+.steps strong{color:var(--text)}
+code{background:var(--card2);padding:2px 6px;border-radius:4px;font-size:12px;color:var(--accent);font-family:monospace}
+.db-input{margin-top:20px;width:100%;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:11px 14px;color:var(--text);font-size:14px;font-family:monospace;transition:border-color .15s}
+.db-input:focus{outline:none;border-color:var(--accent)}
+.db-input::placeholder{color:var(--text2)}
+.err{color:var(--busy);font-size:13px;margin-top:8px;display:none}
+.btn-primary{margin-top:12px;width:100%;background:var(--accent);color:#fff;border:none;border-radius:9px;padding:12px;font-size:15px;font-weight:700;cursor:pointer;transition:opacity .15s;letter-spacing:.01em}
+.btn-primary:hover{opacity:.85}
+.setup-divider{text-align:center;margin:16px 0;color:var(--text2);font-size:13px}
+.btn-secondary{width:100%;background:none;border:1px solid var(--border);color:var(--text2);border-radius:9px;padding:11px;font-size:14px;font-weight:600;cursor:pointer;transition:all .15s}
+.btn-secondary:hover{border-color:var(--accent);color:var(--text)}
+
+/* ── Name overlay ───────────────────────── */
+#name-overlay{position:fixed;inset:0;background:rgba(0,0,0,.72);display:none;align-items:center;justify-content:center;z-index:200;backdrop-filter:blur(6px)}
+#name-overlay.open{display:flex}
+.name-box{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:32px 28px;width:340px;text-align:center}
+.name-box h3{font-size:22px;font-weight:800;margin-bottom:6px}
+.name-box p{color:var(--text2);font-size:14px;margin-bottom:24px;line-height:1.5}
+.name-input{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:9px;padding:12px;color:var(--text);font-size:18px;text-align:center;font-weight:700;letter-spacing:.02em;transition:border-color .15s}
+.name-input:focus{outline:none;border-color:var(--accent)}
+
+/* ── App shell ──────────────────────────── */
+#app{display:none;height:100vh;overflow:hidden;display:none;flex-direction:column}
+.app-header{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;position:relative;z-index:10}
+.app-title{font-size:17px;font-weight:800;display:flex;align-items:center;gap:8px}
+.app-right{display:flex;align-items:center;gap:8px}
+.sync-dot{width:7px;height:7px;border-radius:50%;background:var(--avail);flex-shrink:0;transition:background .3s}
+.sync-dot.syncing{background:var(--maybe)}
+.sync-dot.error{background:var(--busy)}
+.hdr-btn{background:var(--card);border:1px solid var(--border);color:var(--text2);border-radius:7px;padding:5px 11px;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;white-space:nowrap}
+.hdr-btn:hover{border-color:var(--accent);color:var(--accent)}
+.name-wrap{position:relative}
+.name-badge{background:var(--accent);color:#fff;border-radius:7px;padding:5px 12px;font-size:13px;font-weight:700;cursor:pointer;transition:opacity .15s;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:flex;align-items:center;gap:5px;user-select:none}
+.name-badge:hover{opacity:.85}
+.name-badge .caret{font-size:9px;opacity:.7}
+.name-drop{position:absolute;top:calc(100% + 6px);right:0;background:var(--card2);border:1px solid var(--border);border-radius:10px;min-width:160px;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,.4);z-index:50;display:none}
+.name-drop.open{display:block}
+.name-drop-item{padding:10px 14px;font-size:14px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:10px;transition:background .1s}
+.name-drop-item:hover{background:var(--border)}
+.name-drop-item.active{color:var(--accent)}
+.name-drop-item.new-person{color:var(--text2);border-top:1px solid var(--border);font-weight:500}
+.name-drop-avatar{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:#fff;flex-shrink:0}
+
+/* ── Calendar ───────────────────────────── */
+.cal-scroll{flex:1;overflow-y:auto;padding-bottom:80px}
+.cal-nav{display:flex;align-items:center;justify-content:space-between;padding:14px 18px 10px}
+.nav-btn{background:none;border:1px solid var(--border);color:var(--text);border-radius:7px;width:34px;height:34px;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;transition:all .15s}
+.nav-btn:hover{border-color:var(--accent);color:var(--accent)}
+.month-label{font-size:17px;font-weight:800;letter-spacing:.01em}
+.weekdays{display:grid;grid-template-columns:repeat(7,1fr);padding:0 12px;border-bottom:1px solid var(--border)}
+.wd{text-align:center;font-size:11px;font-weight:700;color:var(--text2);padding:5px 0;text-transform:uppercase;letter-spacing:.06em}
+.days{display:grid;grid-template-columns:repeat(7,1fr);padding:6px 12px 12px;gap:3px}
+.day{border-radius:8px;padding:6px 5px 5px;min-height:76px;cursor:pointer;transition:background .12s;border:2px solid transparent;position:relative}
+.day:hover{background:var(--card)}
+.day.other{opacity:.25;cursor:default;pointer-events:none}
+.day.today{border-color:var(--accent)}
+.day.sel{background:var(--card);border-color:var(--accent)}
+.day.msel{background:rgba(124,106,255,.15);border-color:var(--accent);outline:none}
+.multi-btn{background:none;border:1px solid var(--border);color:var(--text2);border-radius:7px;padding:5px 11px;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;white-space:nowrap}
+.multi-btn:hover{border-color:var(--accent);color:var(--accent)}
+.multi-btn.on{background:var(--accent-dim);border-color:var(--accent);color:var(--accent)}
+.multi-bar{position:fixed;bottom:0;left:0;right:0;background:var(--card2);border-top:1px solid var(--border);padding:12px 18px;display:none;align-items:center;gap:10px;z-index:30;box-shadow:0 -4px 20px rgba(0,0,0,.4)}
+.multi-bar.open{display:flex}
+.multi-bar-label{font-size:14px;font-weight:700;flex:1;white-space:nowrap}
+.mbar-btn{padding:8px 14px;border-radius:8px;border:2px solid var(--border);background:none;font-size:13px;font-weight:700;cursor:pointer;transition:all .15s;white-space:nowrap}
+.mbar-btn.avail{color:var(--avail);border-color:var(--avail)}
+.mbar-btn.avail:hover{background:rgba(52,211,153,.12)}
+.mbar-btn.maybe{color:var(--maybe);border-color:var(--maybe)}
+.mbar-btn.maybe:hover{background:rgba(251,191,36,.12)}
+.mbar-btn.busy{color:var(--busy);border-color:var(--busy)}
+.mbar-btn.busy:hover{background:rgba(248,113,113,.12)}
+.mbar-btn.clr{color:var(--text2)}
+.mbar-btn.clr:hover{border-color:var(--text2)}
+.day.past{opacity:.4}
+.day-num{font-size:12px;font-weight:700;margin-bottom:5px}
+.day.today .day-num{color:var(--accent)}
+.chips{display:flex;flex-wrap:wrap;gap:3px;margin-top:2px}
+.chip{width:19px;height:19px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:900;flex-shrink:0;transition:all .12s;letter-spacing:0}
+/* Available: bold filled circle */
+.chip.available{color:#fff}
+/* Maybe: outlined ring, coloured text */
+.chip.maybe{background:transparent !important;border:2.5px solid;color:inherit}
+/* Busy: greyed out */
+.chip.busy{background:rgba(80,80,100,.45) !important;color:var(--text2);position:relative;overflow:hidden}
+.chip.busy::after{content:'';position:absolute;left:50%;top:50%;width:130%;height:2px;background:rgba(255,255,255,.25);transform:translate(-50%,-50%) rotate(-40deg)}
+.day-sum{font-size:10px;color:var(--text2);margin-top:3px;font-weight:600}
+
+/* ── Legend ─────────────────────────────── */
+.legend{display:flex;gap:14px;padding:6px 16px 10px;align-items:center;flex-wrap:wrap}
+.leg-item{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--text2)}
+.leg-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;background:#888}
+
+/* ── Detail panel ───────────────────────── */
+.detail{border-top:1px solid var(--border);padding:18px 18px 28px;background:var(--card);display:none;flex-shrink:0}
+.detail.open{display:block}
+.detail-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.detail-date{font-size:17px;font-weight:800}
+.close-btn{background:none;border:none;color:var(--text2);font-size:22px;cursor:pointer;padding:2px 6px;border-radius:5px;line-height:1;transition:color .12s}
+.close-btn:hover{color:var(--text)}
+
+.status-row{display:flex;gap:8px;margin-bottom:20px}
+.st-btn{flex:1;padding:9px 4px;border-radius:8px;border:2px solid var(--border);background:none;font-size:13px;font-weight:700;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:5px;white-space:nowrap}
+.st-btn.avail{color:var(--avail)}
+.st-btn.avail.on{border-color:var(--avail);background:rgba(52,211,153,.1)}
+.st-btn.busy{color:var(--busy)}
+.st-btn.busy.on{border-color:var(--busy);background:rgba(248,113,113,.1)}
+.st-btn.maybe{color:var(--maybe)}
+.st-btn.maybe.on{border-color:var(--maybe);background:rgba(251,191,36,.1)}
+.st-btn:hover{opacity:.8}
+
+.people{display:flex;flex-direction:column;gap:10px}
+.person-row{display:flex;align-items:center;gap:10px}
+.avatar{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#fff;flex-shrink:0}
+.p-name{flex:1;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.p-status{font-size:12px;font-weight:700;padding:3px 8px;border-radius:5px}
+.p-status.available{color:var(--avail);background:rgba(52,211,153,.1)}
+.p-status.busy{color:var(--busy);background:rgba(248,113,113,.1)}
+.p-status.maybe{color:var(--maybe);background:rgba(251,191,36,.1)}
+.p-status.none{color:var(--text2)}
+.no-resp{color:var(--text2);font-size:14px;text-align:center;padding:12px 0}
+</style>
+</head>
+<body>
+
+<!-- ════════════ SETUP SCREEN ════════════ -->
+<div id="setup">
+  <div class="setup-icon">🗓</div>
+  <div class="setup-title">Lads Lads Lads Availability Calendar</div>
+  <div class="setup-sub">Paste your Firebase Realtime Database URL to get started. You only need to do this once — your friends just open the link you share.</div>
+
+  <div class="setup-card">
+    <h2>Your Firebase database URL</h2>
+    <input class="db-input" id="dbInput" type="text" placeholder="https://your-project-default-rtdb.firebaseio.com" style="margin-top:0">
+    <div class="err" id="dbErr">That doesn't look like a Firebase Realtime Database URL</div>
+    <button class="btn-primary" onclick="connectDb()">Open Calendar →</button>
+    <div class="setup-divider">Don't have a Firebase URL yet?</div>
+    <a href="https://console.firebase.google.com" target="_blank" style="display:block;text-align:center;font-size:14px;color:var(--accent)">Set one up free at console.firebase.google.com →</a>
+    <p style="color:var(--text2);font-size:12px;text-align:center;margin-top:10px;line-height:1.5">Create a project → Build → Realtime Database → Start in test mode → copy the URL</p>
+  </div>
+</div>
+
+<!-- ════════════ NAME OVERLAY ════════════ -->
+<div id="name-overlay">
+  <div class="name-box">
+    <div style="font-size:36px;margin-bottom:10px">👋</div>
+    <h3>What's your name?</h3>
+    <p>Your friends will see this next to your availability</p>
+    <input class="name-input" id="nameInput" placeholder="Your first name" maxlength="20" autocomplete="off">
+    <button class="btn-primary" style="margin-top:14px" onclick="saveName()">Start →</button>
+  </div>
+</div>
+
+<!-- ════════════ MAIN APP ════════════ -->
+<div id="app">
+  <div class="app-header">
+    <div class="app-title">🗓 Lads Lads Lads</div>
+    <div class="app-right">
+      <span class="sync-dot" id="syncDot"></span>
+      <button class="hdr-btn" onclick="copyLink()">Copy link</button>
+      <div class="name-wrap">
+        <div class="name-badge" id="nameBadge" onclick="toggleDrop()">
+          <span id="badgeText">…</span><span class="caret">▾</span>
+        </div>
+        <div class="name-drop" id="nameDrop"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="cal-scroll" id="calScroll">
+    <div class="cal-nav">
+      <button class="nav-btn" onclick="prevMonth()">‹</button>
+      <div class="month-label" id="monthLabel"></div>
+      <div style="display:flex;align-items:center;gap:6px">
+        <button class="multi-btn" id="multiBtn" onclick="toggleMulti()">Select</button>
+        <button class="nav-btn" onclick="nextMonth()">›</button>
+      </div>
+    </div>
+    <div class="multi-bar" id="multiBar">
+      <div class="multi-bar-label" id="multiLabel">0 dates</div>
+      <button class="mbar-btn avail" onclick="applyMulti('available')">✓ Free</button>
+      <button class="mbar-btn maybe" onclick="applyMulti('maybe')">? Maybe</button>
+      <button class="mbar-btn busy" onclick="applyMulti('busy')">✗ Busy</button>
+      <button class="mbar-btn clr" onclick="applyMulti(null)">Clear</button>
+    </div>
+    <div class="legend">
+      <div class="leg-item"><div class="chip available" style="background:#888;width:16px;height:16px;font-size:8px">A</div> Free</div>
+      <div class="leg-item"><div class="chip maybe" style="border-color:#888;color:#888;width:16px;height:16px;font-size:8px">A</div> Maybe</div>
+      <div class="leg-item"><div class="chip busy" style="width:16px;height:16px;font-size:8px">A</div> Busy</div>
+      <span style="color:var(--text2);font-size:12px">· colour = person</span>
+    </div>
+    <div class="weekdays">
+      <div class="wd">Sun</div><div class="wd">Mon</div><div class="wd">Tue</div>
+      <div class="wd">Wed</div><div class="wd">Thu</div><div class="wd">Fri</div><div class="wd">Sat</div>
+    </div>
+    <div class="days" id="daysGrid"></div>
+  </div>
+
+  <div class="detail" id="detail">
+    <div class="detail-hdr">
+      <div class="detail-date" id="detailDate"></div>
+      <button class="close-btn" onclick="closeDetail()">×</button>
+    </div>
+    <div class="status-row">
+      <button class="st-btn avail" id="stAvail" onclick="setStatus('available')">✓ Free</button>
+      <button class="st-btn maybe" id="stMaybe" onclick="setStatus('maybe')">? Maybe</button>
+      <button class="st-btn busy" id="stBusy" onclick="setStatus('busy')">✗ Busy</button>
+    </div>
+    <div class="people" id="peopleList"></div>
+  </div>
+</div>
+
+<script>
+// ─── State ──────────────────────────────────────────────────
+let DB = '';
+let myName = '';
+let selDate = null;
+let viewYear, viewMonth;
+let calData = {};
+let memberNames = []; // persisted in Firebase, never lost
+let pollId = null;
+let multiMode = false;
+let multiSel = new Set(); // selected date keys in multi-select mode
+
+const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+function pad(n){return String(n).padStart(2,'0')}
+const todayKey = (()=>{const d=new Date();return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())})();
+
+// ─── Boot ───────────────────────────────────────────────────
+(function boot(){
+  // Hash takes priority (shared link)
+  const hash = location.hash.slice(1);
+  const hp = new URLSearchParams(hash);
+  const hashDb = hp.get('db');
+  if(hashDb){
+    DB = hashDb.replace(/\/$/,'');
+    localStorage.setItem('fcal_db', DB);
+    launch(); return;
+  }
+  // Auto-launch if we've connected before
+  const stored = localStorage.getItem('fcal_db');
+  if(stored){
+    DB = stored;
+    launch(); return;
+  }
+  // First-ever open: show setup screen
+})();
+
+
+function connectDb(){
+  const v = document.getElementById('dbInput').value.trim().replace(/\/$/,'');
+  if(!v.startsWith('https://') || !v.includes('firebaseio.com')){
+    document.getElementById('dbErr').style.display='block';return;
+  }
+  document.getElementById('dbErr').style.display='none';
+  DB = v;
+  localStorage.setItem('fcal_db', DB);
+  // Embed in URL hash so the shared link works
+  const p = new URLSearchParams();
+  p.set('db', DB);
+  history.replaceState(null,'','#'+p.toString());
+  launch();
+}
+
+function launch(){
+  document.getElementById('setup').style.display='none';
+  document.getElementById('app').style.display='flex';
+  document.getElementById('app').style.flexDirection='column';
+  const now = new Date();
+  viewYear=now.getFullYear(); viewMonth=now.getMonth();
+  myName = localStorage.getItem('fcal_name')||'';
+  if(!myName){
+    openNameOverlay();
+  } else {
+    updateBadge();
+  }
+  renderCal();
+  startPoll();
+}
+
+// ─── Name / Dropdown ────────────────────────────────────────
+function openNameOverlay(){
+  const ov = document.getElementById('name-overlay');
+  ov.classList.add('open');
+  setTimeout(()=>document.getElementById('nameInput').focus(),80);
+  document.getElementById('nameInput').value = '';
+  document.getElementById('nameInput').onkeydown=e=>{if(e.key==='Enter')saveName()};
+}
+function saveName(){
+  const v=document.getElementById('nameInput').value.trim();
+  if(!v)return;
+  myName=v;
+  localStorage.setItem('fcal_name',myName);
+  document.getElementById('name-overlay').classList.remove('open');
+  // Register in Firebase so the name persists even with no dates marked
+  if(!memberNames.includes(myName)){memberNames=[...new Set([...memberNames,myName])].sort();}
+  registerMember(myName);
+  updateBadge();
+  renderCal();
+  if(selDate)renderDetail(selDate);
+}
+function allKnownNames(){
+  // Merge Firebase member list + anyone in calData (belt and braces)
+  const names=new Set(memberNames);
+  Object.values(calData).forEach(day=>Object.keys(day).forEach(n=>names.add(n)));
+  if(myName)names.add(myName);
+  return [...names].sort();
+}
+function toggleDrop(){
+  const drop=document.getElementById('nameDrop');
+  const isOpen=drop.classList.contains('open');
+  if(isOpen){drop.classList.remove('open');return;}
+  // Build dropdown
+  drop.innerHTML='';
+  const names=allKnownNames();
+  names.forEach(name=>{
+    const item=document.createElement('div');
+    item.className='name-drop-item'+(name===myName?' active':'');
+    const av=document.createElement('div');
+    av.className='name-drop-avatar';
+    av.style.background=nameColor(name);
+    av.textContent=name.charAt(0).toUpperCase();
+    const label=document.createElement('span');
+    label.textContent=name+(name===myName?' ✓':'');
+    item.appendChild(av);item.appendChild(label);
+    item.onclick=()=>{selectName(name);drop.classList.remove('open');};
+    drop.appendChild(item);
+  });
+  const newItem=document.createElement('div');
+  newItem.className='name-drop-item new-person';
+  newItem.textContent='+ New person';
+  newItem.onclick=()=>{drop.classList.remove('open');openNameOverlay();};
+  drop.appendChild(newItem);
+  drop.classList.add('open');
+  // Close on outside click
+  setTimeout(()=>document.addEventListener('click',closeDrop,{once:true}),0);
+}
+function closeDrop(e){
+  const drop=document.getElementById('nameDrop');
+  if(!drop.contains(e.target))drop.classList.remove('open');
+}
+function selectName(name){
+  myName=name;
+  localStorage.setItem('fcal_name',myName);
+  registerMember(myName); // ensure they stay in the list
+  updateBadge();
+  renderCal();
+  if(selDate)renderDetail(selDate);
+}
+function updateBadge(){document.getElementById('badgeText').textContent=myName||'?'}
+
+// ─── Firebase REST ──────────────────────────────────────────
+function setSyncState(s){
+  const d=document.getElementById('syncDot');
+  d.className='sync-dot'+(s==='syncing'?' syncing':s==='error'?' error':'');
+}
+async function fetchData(){
+  setSyncState('syncing');
+  try{
+    const [rc,rn]=await Promise.all([fetch(DB+'/cal.json'),fetch(DB+'/members.json')]);
+    if(!rc.ok)throw new Error(rc.status);
+    calData=(await rc.json())||{};
+    const nm=rn.ok?(await rn.json()):null;
+    memberNames=nm?Object.keys(nm).sort():[];
+    setSyncState('ok');
+    renderCal();
+    if(selDate)renderDetail(selDate);
+  }catch(e){
+    setSyncState('error');
+    console.error('Fetch error',e);
+  }
+}
+async function registerMember(name){
+  try{
+    await fetch(DB+'/members/'+encodeURIComponent(name)+'.json',{
+      method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(true)
+    });
+  }catch(e){console.error('Register error',e);}
+}
+async function writeStatus(date,status){
+  if(!myName||!DB)return;
+  setSyncState('syncing');
+  const path=DB+'/cal/'+date+'/'+encodeURIComponent(myName)+'.json';
+  try{
+    if(status){
+      await fetch(path,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(status)});
+    }else{
+      await fetch(path,{method:'DELETE'});
+    }
+    setSyncState('ok');
+    await fetchData();
+  }catch(e){
+    setSyncState('error');
+    console.error('Write error',e);
+  }
+}
+function startPoll(){
+  if(pollId)clearInterval(pollId);
+  fetchData();
+  pollId=setInterval(fetchData,5000);
+}
+
+// ─── Calendar ───────────────────────────────────────────────
+function prevMonth(){viewMonth--;if(viewMonth<0){viewMonth=11;viewYear--;}renderCal()}
+function nextMonth(){viewMonth++;if(viewMonth>11){viewMonth=0;viewYear++;}renderCal()}
+
+function renderCal(){
+  document.getElementById('monthLabel').textContent=MONTHS[viewMonth]+' '+viewYear;
+  const grid=document.getElementById('daysGrid');
+  grid.innerHTML='';
+  const first=new Date(viewYear,viewMonth,1);
+  const startDay=first.getDay();
+  const daysInMonth=new Date(viewYear,viewMonth+1,0).getDate();
+  const daysInPrev=new Date(viewYear,viewMonth,0).getDate();
+  const cells=[];
+  for(let i=startDay-1;i>=0;i--)cells.push({d:daysInPrev-i,mo:viewMonth-1,yr:viewYear,out:true});
+  for(let d=1;d<=daysInMonth;d++)cells.push({d,mo:viewMonth,yr:viewYear,out:false});
+  while(cells.length%7!==0)cells.push({d:cells.length-daysInMonth-startDay+1,mo:viewMonth+1,yr:viewYear,out:true});
+  cells.forEach(c=>{
+    const yr=c.out?(c.mo<0?c.yr-1:c.mo>11?c.yr+1:c.yr):c.yr;
+    const mo=((c.mo%12)+12)%12;
+    const key=yr+'-'+pad(mo+1)+'-'+pad(c.d);
+    const cell=document.createElement('div');
+    cell.className='day'+(c.out?' other':'')+(key===todayKey?' today':'')+((!multiMode&&key===selDate)?' sel':'')+(multiSel.has(key)?' msel':'')+((!c.out&&key<todayKey)?' past':'');
+    const num=document.createElement('div');
+    num.className='day-num';num.textContent=c.d;cell.appendChild(num);
+    const dd=calData[key]||{};
+    const chipsEl=document.createElement('div');chipsEl.className='chips';
+    const counts={available:0,busy:0,maybe:0};
+    // Sort: available first, maybe second, busy last
+    const sorted=Object.entries(dd).sort(([,a],[,b])=>{
+      const o={available:0,maybe:1,busy:2};return(o[a]??3)-(o[b]??3);
+    });
+    sorted.forEach(([name,st])=>{
+      const chip=document.createElement('div');
+      const color=nameColor(name);
+      chip.className='chip '+(st||'');
+      chip.title=name+': '+(st||'');
+      chip.textContent=name.charAt(0).toUpperCase();
+      if(st==='available'){chip.style.background=color;}
+      else if(st==='maybe'){chip.style.borderColor=color;chip.style.color=color;}
+      chipsEl.appendChild(chip);
+      if(counts[st]!==undefined)counts[st]++;
+    });
+    cell.appendChild(chipsEl);
+    if(Object.keys(dd).length>0){
+      const sum=document.createElement('div');sum.className='day-sum';
+      const parts=[];
+      if(counts.available)parts.push(counts.available+'✓');
+      if(counts.busy)parts.push(counts.busy+'✗');
+      if(counts.maybe)parts.push(counts.maybe+'?');
+      sum.textContent=parts.join(' ');cell.appendChild(sum);
+    }
+    if(!c.out)cell.addEventListener('click',(e)=>{
+      if(e.metaKey||e.ctrlKey){
+        // Cmd/Ctrl+click: enter multi-select silently if not already in it
+        if(!multiMode){
+          multiMode=true;
+          document.getElementById('multiBtn').classList.add('on');
+          document.getElementById('multiBtn').textContent='Done';
+          closeDetail();
+        }
+        toggleMultiDate(key);
+      } else if(multiMode){
+        toggleMultiDate(key);
+      } else {
+        openDetail(key);
+      }
+    });
+    grid.appendChild(cell);
+  });
+}
+
+// ─── Detail ─────────────────────────────────────────────────
+function openDetail(key){
+  selDate=key;
+  renderCal();
+  renderDetail(key);
+  const det=document.getElementById('detail');
+  det.classList.add('open');
+  det.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+function closeDetail(){
+  selDate=null;
+  document.getElementById('detail').classList.remove('open');
+  renderCal();
+}
+function renderDetail(key){
+  const pts=key.split('-');
+  const d=new Date(+pts[0],+pts[1]-1,+pts[2]);
+  document.getElementById('detailDate').textContent=d.toLocaleDateString(undefined,{weekday:'long',month:'long',day:'numeric'});
+  const dd=calData[key]||{};
+  const my=myName?(dd[myName]||''):'';
+  document.getElementById('stAvail').classList.toggle('on',my==='available');
+  document.getElementById('stMaybe').classList.toggle('on',my==='maybe');
+  document.getElementById('stBusy').classList.toggle('on',my==='busy');
+  const list=document.getElementById('peopleList');
+  list.innerHTML='';
+  const names=Object.keys(dd);
+  if(!names.length){list.innerHTML='<div class="no-resp">No one has responded yet. Mark your status above!</div>';return;}
+  names.sort().forEach(name=>{
+    const st=dd[name];
+    const row=document.createElement('div');row.className='person-row';
+    const av=document.createElement('div');av.className='avatar';av.style.background=nameColor(name);av.textContent=name.charAt(0).toUpperCase();
+    const nm=document.createElement('div');nm.className='p-name';nm.textContent=name+(name===myName?' (you)':'');
+    const badge=document.createElement('div');badge.className='p-status '+(st||'none');
+    badge.textContent=st==='available'?'✓ Free':st==='busy'?'✗ Busy':st==='maybe'?'? Maybe':'—';
+    row.appendChild(av);row.appendChild(nm);row.appendChild(badge);
+    list.appendChild(row);
+  });
+}
+function setStatus(status){
+  if(!myName||!selDate)return;
+  const dd=calData[selDate]||{};
+  const cur=dd[myName];
+  const next=cur===status?null:status;
+  if(!calData[selDate])calData[selDate]={};
+  if(next){calData[selDate][myName]=next;}
+  else{delete calData[selDate][myName];if(!Object.keys(calData[selDate]).length)delete calData[selDate];}
+  renderCal();
+  renderDetail(selDate);
+  writeStatus(selDate,next);
+}
+
+// ─── Utilities ──────────────────────────────────────────────
+function nameColor(name){
+  // 8 maximally distinct, vibrant colours
+  const cs=['#ff4d6d','#ff9f1c','#2ec4b6','#6a4c93','#4361ee','#f72585','#06d6a0','#ffd60a'];
+  let h=0;for(let i=0;i<name.length;i++)h=name.charCodeAt(i)+((h<<5)-h);
+  return cs[Math.abs(h)%cs.length];
+}
+// ─── Multi-select ────────────────────────────────────────────
+function toggleMulti(){
+  multiMode=!multiMode;
+  multiSel.clear();
+  document.getElementById('multiBtn').classList.toggle('on',multiMode);
+  document.getElementById('multiBtn').textContent=multiMode?'Done':'Select';
+  document.getElementById('multiBar').classList.remove('open');
+  // Close detail panel when entering multi mode
+  if(multiMode)closeDetail();
+  renderCal();
+}
+function toggleMultiDate(key){
+  if(multiSel.has(key)){multiSel.delete(key);}else{multiSel.add(key);}
+  const n=multiSel.size;
+  const bar=document.getElementById('multiBar');
+  document.getElementById('multiLabel').textContent=n+' date'+(n!==1?'s':'')+' selected';
+  bar.classList.toggle('open',n>0);
+  renderCal();
+}
+async function applyMulti(status){
+  if(!myName){openNameOverlay();return;}
+  if(!multiSel.size)return;
+  // Optimistic update
+  multiSel.forEach(key=>{
+    if(status){
+      if(!calData[key])calData[key]={};
+      calData[key][myName]=status;
+    }else{
+      if(calData[key]){delete calData[key][myName];if(!Object.keys(calData[key]).length)delete calData[key];}
+    }
+  });
+  renderCal();
+  // Write all to Firebase in parallel
+  await Promise.all([...multiSel].map(key=>writeStatus(key,status)));
+  // Exit multi mode after applying
+  multiMode=false;multiSel.clear();
+  document.getElementById('multiBtn').classList.remove('on');
+  document.getElementById('multiBtn').textContent='Select';
+  document.getElementById('multiBar').classList.remove('open');
+  renderCal();
+}
+function copyLink(){
+  // Build the shareable URL (current URL with db in hash)
+  const p=new URLSearchParams();p.set('db',DB);
+  const url=location.origin+location.pathname+'#'+p.toString();
+  navigator.clipboard.writeText(url).then(()=>{
+    const btn=document.querySelector('.hdr-btn');
+    const orig=btn.textContent;
+    btn.textContent='Copied!';btn.style.color='var(--avail)';
+    setTimeout(()=>{btn.textContent=orig;btn.style.color='';},2000);
+  });
+}
+</script>
+</body>
+</html>
